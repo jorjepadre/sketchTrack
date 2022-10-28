@@ -31,11 +31,15 @@ class ofApp : public ofBaseApp{
     Mat imgMat;
     ofxPanel gui;
     ofxIntSlider lowThreshold;
-    ofxIntSlider lineVoteThreshold;
     
     vector<Vec4i> lines;
     
     Mat mask;
-    vector<cv::Point> keyPoints;
+    
+    vector<cv::Point> points;
+    int point;
+    Boolean toTheRight;
+    Boolean pointsPushed;
+    int newThreshold;
 		
 };

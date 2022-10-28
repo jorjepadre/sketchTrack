@@ -3,17 +3,37 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    
     gui.setup();
     gui.add(lowThreshold.setup("low threshold", 50, 0, 100));
-    gui.add(lineVoteThreshold.setup("line vote threshold", 150, 0, 200));
     
-    img.load("1.jpg");
+    img.load("4.jpg");
     img.setImageType(OF_IMAGE_COLOR);
+    
+    pointsPushed = false;
+    point = 0;
+    toTheRight = true;
+    
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
 
+}
+
+void pushPoints(const ofImage& img, const Mat& imgMat, Boolean& pointsPushed, vector<cv::Point>& points) {
+    if (!pointsPushed) {
+        for(int i = 0; i < img.getWidth(); i++){
+            for(int j = 0; j < img.getHeight(); j++){
+                if(imgMat.data[int(i+img.getWidth()*j)] > 200){
+                    cv::Point p(i,j);
+                    points.push_back(p);
+                    break;
+                }
+            }
+        }
+    }
+    pointsPushed = true;
 }
 
 //--------------------------------------------------------------
@@ -22,23 +42,55 @@ void ofApp::draw(){
     ofSetColor(255, 255, 255);
     img.draw(0,0);
     
+    
+    // Getting the Edges
     imgMat = toCv(img);
     cvtColor(imgMat, imgMat, CV_BGR2GRAY);
     mask = Mat::zeros(cv::Size(img.getWidth(),img.getHeight()), CV_8U);
-    for(int i = 0; i < keyPoints.size(); i++){
-        ofSetColor(0, 255, 0);
-        ofDrawCircle(keyPoints[i].x, keyPoints[i].y, 5);
-    }
-    
-    if(keyPoints.size()>=3){
-        fillConvexPoly(mask, keyPoints.data(), keyPoints.size(), Scalar(255,255,255));
-        bitwise_and(imgMat, mask, imgMat);
-    }
-    
     GaussianBlur(imgMat, imgMat, 3);
     Canny(imgMat, imgMat, lowThreshold, lowThreshold*2);
-    drawMat(imgMat, 0, 0); // Draws the white edges on black background
     
+    
+    // Pushing Points
+    pushPoints(img, imgMat, pointsPushed, points);
+    
+    
+    if(ofGetElapsedTimeMillis() > 10) {
+        
+        // Movement
+        if (toTheRight) point++;
+        else point--;
+        
+        // Reverse
+        if (point == points.size()) toTheRight = false;
+        if (point == 0) toTheRight = true;
+        
+        // Timing
+        ofResetElapsedTimeCounter();
+    }
+    
+    // Drawing
+    ofDrawCircle(points[point].x, points[point].y, 20);
+    
+    
+    // Adjusting Threshold mechnism
+    if (newThreshold != lowThreshold) {
+        
+        pointsPushed = false;
+        newThreshold = lowThreshold;
+        
+        // Remove all points
+        while(!points.empty()){
+            points.pop_back();
+        }
+        
+        // Pushing Points
+        pushPoints(img, imgMat, pointsPushed, points);
+        
+    }
+    
+    // Draw the Edges
+//    drawMat(imgMat, 0, 0); // Draws the white edges on black background on top of image
     gui.draw();
 }
 
@@ -64,10 +116,7 @@ void ofApp::mouseDragged(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
-    if(x>=0&&x<img.getWidth()&&y>=0&&y<img.getHeight()){
-        cv::Point p(x,y);
-        keyPoints.push_back(p);
-    }
+
 }
 
 //--------------------------------------------------------------
